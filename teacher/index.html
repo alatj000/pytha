@@ -73,6 +73,8 @@ const lg=(step,k,v)=>{ev(step,'ans',{k,v});save(1)};
 function save(now){clearTimeout(tm);stat='저장 중…';tm=setTimeout(flush,now?0:600)}
 async function flush(){const evs=q.splice(0);try{await rpc('student_save',{p_token:S.token,p_data:D,p_max:S.max,p_done:allDone(),p_events:evs});stat='저장됨 ✓'}catch(e){q.unshift(...evs);stat='⚠ 저장 실패 (연결 확인)'}const s=$('#stat');if(s)s.textContent=stat}
 // ---------- 라우팅 ----------
+let TK=sessionStorage.getItem('tk'),LIST=[],poll;
+let fq='',ff=0;
 const R=document.documentElement.dataset.role;if(R==='student')loginS();else if(R==='teacher')loginT();else home();
 function home(){A.innerHTML=`<div class="ctr"><h1 style="margin:0 0 6px">피타고라스 정리</h1><p>도형 속에 숨겨진 수학적 관계를 발견해 보자.</p><a class="btn p" href="student/">학생으로 입장하기</a><a class="btn" href="teacher/">선생님으로 입장하기</a></div>`}
 function warn(){return cfgOk?'':`<p class="no">Supabase 설정(config.js)이 없어 저장·입장을 할 수 없습니다.</p>`}
@@ -134,10 +136,8 @@ function v4(){const p=prob(pi),lab=p.ar.map((v,j)=>j===p.h?'?':v),n=3+D.app.ex,k
 function addx(){if(D.app.ex>=3)return;D.app.ex++;pi=2+D.app.ex;ev(4,'extra_open',{n:D.app.ex});save(1);v4();upd()}
 function fb(){const p=prob(pi),v=D.app.ans[pi],f=$('#fb');if(f)f.innerHTML=!v?'':basicOk(pi)?'<span class="ok">✓ 정답</span>':'<span class="no">다시 생각해 봐요</span>';upd()}
 // ---------- 교사 ----------
-let TK=sessionStorage.getItem('tk'),LIST=[],poll;
 function loginT(){if(TK)return dash();A.innerHTML=`<div class="ctr c" style="padding:24px"><h2 style="margin-top:0">교사 인증</h2>${warn()}<input id="pw" type="password" placeholder="교사용 비밀번호"><p id="er" class="no"></p><button class="p" id="go" ${cfgOk?'':'disabled'}>확인</button></div>`;
  $('#go').onclick=async()=>{try{const t=await rpc('teacher_login',{p_pw:$('#pw').value});if(!t){$('#er').textContent='비밀번호가 올바르지 않습니다.';return}TK=t;sessionStorage.setItem('tk',t);dash()}catch(e){$('#er').textContent='오류: '+e.message}}}
-let fq='',ff=0;
 async function dash(){A.innerHTML=`<header><b>교사용 대시보드</b><span class="small" id="ts"></span><button onclick="dl()">CSV 다운로드</button><button onclick="sessionStorage.removeItem('tk');location.reload()">나가기</button></header><div class="dash" id="dv"></div>`;await load();clearInterval(poll);poll=setInterval(()=>{if(!$('#det'))load()},10000)}
 async function load(){try{LIST=await rpc('teacher_list',{p_token:TK});$('#ts').textContent='갱신: '+new Date().toLocaleTimeString()+' (10초마다 자동 조회)';drawT()}catch(e){if(/unauthorized/.test(e.message)){sessionStorage.removeItem('tk');location.reload()}else $('#dv').innerHTML='<p class="no">불러오기 실패: '+esc(e.message)+'</p>'}}
 const online=s=>Date.now()-new Date(s.last_seen)<90000;
