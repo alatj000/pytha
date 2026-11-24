@@ -73,7 +73,7 @@ const lg=(step,k,v)=>{ev(step,'ans',{k,v});save(1)};
 function save(now){clearTimeout(tm);stat='저장 중…';tm=setTimeout(flush,now?0:600)}
 async function flush(){const evs=q.splice(0);try{const r=await rpc('student_save',{p_token:S.token,p_data:D,p_max:S.max,p_done:allDone(),p_events:evs});if(r&&r.open!=null)S.open=r.open;stat='저장됨 ✓'}catch(e){if(/locked/.test(e.message)){stat='⚠ 선생님이 열지 않은 단계예요';spoll()}else{q.unshift(...evs);stat='⚠ 저장 실패 (연결 확인)'}}const s=$('#stat');if(s)s.textContent=stat}
 // ---------- 라우팅 ----------
-const R=document.documentElement.dataset.role;if(R==='student')loginS();else if(R==='teacher')loginT();else home();
+
 function home(){A.innerHTML=`<div class="ctr"><h1 style="margin:0 0 6px">피타고라스 정리</h1><p>도형 속에 숨겨진 수학적 관계를 발견해 보자.</p><a class="btn p" href="student/">학생으로 입장하기</a><a class="btn" href="teacher/">선생님으로 입장하기</a></div>`}
 function warn(){return cfgOk?'':`<p class="no">Supabase 설정(config.js)이 없어 저장·입장을 할 수 없습니다.</p>`}
 function loginS(){A.innerHTML=`<div class="ctr c" style="padding:24px"><h2 style="margin-top:0">학생 입장</h2>${warn()}<input id="cl" placeholder="반 코드 (선생님이 알려 준 코드)"><br><br><input id="no" placeholder="학번 (예: 20105)"><br><br><input id="nm" placeholder="이름"><p id="er" class="no"></p><button class="p" id="go" ${cfgOk?'':'disabled'}>입장하기</button></div>`;
@@ -164,4 +164,6 @@ function dl(){const H=['반','학번','이름','열린단계','완료','마지�
   return[s.class,s.no,s.name,s.max_step,s.completed?'Y':'N',s.updated_at,Object.entries(o.a||{}).map(([k,v])=>k+':'+v.join('/')).join(' | '),(o.extra||[]).join(','),o.guess,a.kind,r.cmp?'Y':'N',r.t1,r.t2,
   (ap.ord?.length?[0,1,2,3,4,5].filter(k=>k<3||ap.ans?.[k]).map(k=>{const p=prob(k);return`${k<3?"기본":"추가"}${k<3?k+1:k-2}:${p.p}-${p.q}:${ap.ans?.[k]??''}:${String(ap.ans?.[k])==String(p.ans)?'O':'X'}`}).join(' | '):''),...(ap.r||['','',''])]});
  const q2=v=>'"'+String(v??'').replace(/"/g,'""')+'"',blob=new Blob(['\ufeff'+[H,...rows].map(r=>r.map(q2).join(',')).join('\n')],{type:'text/csv'}),u=document.createElement('a');u.href=URL.createObjectURL(blob);u.download='pythagoras_activity.csv';u.click()}
+// 모든 선언이 끝난 뒤 화면을 시작합니다 (TK 등 let 변수 초기화 이후)
+const R=document.documentElement.dataset.role;if(R==='student')loginS();else if(R==='teacher')loginT();else home();
 </script></body></html>
