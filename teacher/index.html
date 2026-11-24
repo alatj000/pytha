@@ -27,7 +27,7 @@ const C=window.CFG||{},$=s=>document.querySelector(s),A=$('#app');
 const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 const cfgOk=C.SUPABASE_URL&&C.SUPABASE_ANON_KEY&&!/YOUR/.test(C.SUPABASE_URL+C.SUPABASE_ANON_KEY);
 async function rpc(fn,a){const r=await fetch(C.SUPABASE_URL+'/rest/v1/rpc/'+fn,{method:'POST',headers:{apikey:C.SUPABASE_ANON_KEY,'Content-Type':'application/json'},body:JSON.stringify(a)});if(!r.ok)throw new Error(await r.text());return r.json()}
-const ALL=[[3,4,5],[5,12,13],[8,15,17],[6,8,10],[7,24,25],[9,12,15]],BASE=ALL.slice(0,2),EXT=ALL.slice(2),HID=[2,0,2,1,2,0],NAMES=['관찰하기','관계 발견하기','생각 정리하기','적용하기'];
+const ALL=[[2,1,5],[2,2,8],[3,2,13],[3,3,18],[4,1,17],[5,2,29],[6,4,52]],BASE=ALL.slice(0,3),EXT=ALL.slice(3),HID=[2,0,1,2,0,1],NAMES=['관찰하기','관계 발견하기','생각 정리하기','적용하기'];
 const key=t=>t.join('-');
 // ---------- 기하 (a=3,b=4,c=5, 큰 정사각형 한 변 7) ----------
 const SH=[[0,0],[4,0],[0,3]],T1=[{x:0,y:0,r:0},{x:7,y:0,r:1},{x:7,y:7,r:2},{x:0,y:7,r:3}];
@@ -51,61 +51,60 @@ function sq2(T,a,sel){return `<defs><pattern id="gp" width="1" height="1" patter
 const svg2=(T,a,sel,id)=>`<svg ${id?`id="${id}"`:''} viewBox="-.4 -.4 7.8 7.8">${sq2(T,a,sel)}</svg>`;
 // ---------- 1·4단계: 직각삼각형과 정사각형 ----------
 function triSvg(p,q,c,sel,lab,click){const B=[p,0],Cc=[0,-q],n=[q,-p],S=[[[0,0],[p,0],[p,p],[0,p]],[[0,0],[0,-q],[-q,-q],[-q,0]],[B,Cc,[Cc[0]+n[0],Cc[1]+n[1]],[B[0]+n[0],B[1]+n[1]]]],
- ct=S.map(s=>[s.reduce((a,v)=>a+v[0],0)/4,s.reduce((a,v)=>a+v[1],0)/4]),f=(p+q+c)/16,x0=-q-1,y0=-q-p-1,w=p+2*q+2,h=q+2*p+2;
+ ct=S.map(s=>[s.reduce((a,v)=>a+v[0],0)/4,s.reduce((a,v)=>a+v[1],0)/4]),f=(p+q+Math.max(p,q))/16,x0=-q-1,y0=-q-p-1,w=p+2*q+2,h=q+2*p+2;
  return `<svg viewBox="${x0} ${y0} ${w} ${h}"><defs><pattern id="g1" width="1" height="1" patternUnits="userSpaceOnUse"><path d="M1 0H0V1" fill="none" stroke="#cfd6e0" stroke-width=".03"/></pattern><pattern id="g2" width="1" height="1" patternUnits="userSpaceOnUse"><path d="M1 0H0V1" fill="none" stroke="#8d9bb0" stroke-opacity=".45" stroke-width=".03"/></pattern></defs><rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#fff"/><rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="url(#g1)"/>`+
  S.map((s,i)=>`<polygon ${click?`onclick="pick(${i})" style="cursor:pointer"`:''} points="${s.join(' ')}" fill="${i===sel?'#9ec1e6':['#e8f1fa','#eef0f3','#dfe9f6'][i]}" stroke="#1b2a4a" stroke-width="${f/12}"/><polygon points="${s.join(' ')}" fill="url(#g2)" stroke="none" pointer-events="none"/><text x="${ct[i][0]}" y="${ct[i][1]}" font-size="${f}" text-anchor="middle" dominant-baseline="middle" fill="#1b2a4a" pointer-events="none">${lab[i]}</text>`).join('')+
  `<polygon points="0,0 ${p},0 0,${-q}" fill="#fff" stroke="#1b2a4a" stroke-width="${f/8}"/><path d="M0 0h${f/3}v${-f/3}h${-f/3}z" fill="none" stroke="#1b2a4a" stroke-width="${f/16}"/></svg>`}
 // ---------- 상태 ----------
 let S=null,D=null,cur=1,ti=0,selq=-1,cv=false,sel2=-1,stat='';
 const def=()=>({obs:{a:{},extra:[],guess:''},rel:{t:T1.map(t=>({...t})),v1:false,cmp:false,fin:null,t1:'',t2:''},app:{ord:[],ans:{},r:['','',''],ex:0}});
-function shuf(){const a=[0,1,2,3,4,5];for(let i=5;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-const gok=v=>{v=(v||'').trim();return v.length>=5&&new Set(v.replace(/\s/g,'')).size>=3};
+function shuf(){const f=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};return[...f([0,1,2]),...f([3,4,5])]}
+
 const six=()=>BASE.every(t=>[0,1,2].every(j=>aok(key(t),j)));
-const aok=(k,j)=>{const[t]=[ALL.find(x=>key(x)===k)];const v=[t[0]**2,t[1]**2,t[2]**2][j];return String(D.obs.a[k]?.[j]??'')===String(v)};
-const done1=()=>six()&&gok(D.obs.guess);
-const prob=k=>{const[p,q,c]=ALL[D.app.ord[k]],ar=[p*p,q*q,c*c],h=HID[k];return{p,q,c,ar,h,ans:ar[h]}};
-const L=(v,n)=>(v||'').trim().length>=n,basicOk=i=>String(D.app.ans[i]??'')==String(prob(i).ans);
+const aok=(k,j)=>{const t=ALL.find(x=>key(x)===k);if(!t)return false;return String(D.obs.a[k]?.[j]??'')===String([t[0]**2,t[1]**2,t[2]][j])};
+const done1=()=>six();
+const prob=k=>{const[p,q,c]=ALL[D.app.ord[k]],ar=[p*p,q*q,c],h=HID[k];return{p,q,c,ar,h,ans:ar[h]}};
+const L=(v,n)=>{v=(v||'').trim().replace(/\s/g,'');if(v.length<n||/^(.{1,3})\1+$/.test(v))return false;const m={};for(const ch of v)m[ch]=(m[ch]||0)+1;return Object.keys(m).length>=3&&Math.max(...Object.values(m))/v.length<=.5},basicOk=i=>String(D.app.ans[i]??'')==String(prob(i).ans);
 const c=k=>k==1?D.rel.v1&&D.rel.cmp:k==2?false:0;
-const comp=k=>k==1?done1():k==2?D.rel.v1&&D.rel.cmp:k==3?L(D.rel.t1,5)&&L(D.rel.t2,5):[0,1,2].every(basicOk)&&L(D.app.r[0],6)&&L(D.app.r[1],6);
-const allDone=()=>[1,2,3,4].every(comp);
+const comp=k=>k==1?six():k==2?D.rel.v1&&D.rel.cmp:[0,1,2].every(basicOk);
+const allDone=()=>STG.every(comp);
 let q=[],tm;const ev=(step,kind,payload)=>q.push({step,kind,payload,at:new Date().toISOString()});
 const lg=(step,k,v)=>{ev(step,'ans',{k,v});save(1)};
 function save(now){clearTimeout(tm);stat='저장 중…';tm=setTimeout(flush,now?0:600)}
-async function flush(){const evs=q.splice(0);try{await rpc('student_save',{p_token:S.token,p_data:D,p_max:S.max,p_done:allDone(),p_events:evs});stat='저장됨 ✓'}catch(e){q.unshift(...evs);stat='⚠ 저장 실패 (연결 확인)'}const s=$('#stat');if(s)s.textContent=stat}
+async function flush(){const evs=q.splice(0);try{const r=await rpc('student_save',{p_token:S.token,p_data:D,p_max:S.max,p_done:allDone(),p_events:evs});if(r&&r.open!=null)S.open=r.open;stat='저장됨 ✓'}catch(e){if(/locked/.test(e.message)){stat='⚠ 선생님이 열지 않은 단계예요';spoll()}else{q.unshift(...evs);stat='⚠ 저장 실패 (연결 확인)'}}const s=$('#stat');if(s)s.textContent=stat}
 // ---------- 라우팅 ----------
-let TK=sessionStorage.getItem('tk'),LIST=[],poll;
-let fq='',ff=0;
 const R=document.documentElement.dataset.role;if(R==='student')loginS();else if(R==='teacher')loginT();else home();
 function home(){A.innerHTML=`<div class="ctr"><h1 style="margin:0 0 6px">피타고라스 정리</h1><p>도형 속에 숨겨진 수학적 관계를 발견해 보자.</p><a class="btn p" href="student/">학생으로 입장하기</a><a class="btn" href="teacher/">선생님으로 입장하기</a></div>`}
 function warn(){return cfgOk?'':`<p class="no">Supabase 설정(config.js)이 없어 저장·입장을 할 수 없습니다.</p>`}
-function loginS(){A.innerHTML=`<div class="ctr c" style="padding:24px"><h2 style="margin-top:0">학생 입장</h2>${warn()}<input id="no" placeholder="학번 (예: 20105)"><br><br><input id="nm" placeholder="이름"><p id="er" class="no"></p><button class="p" id="go" ${cfgOk?'':'disabled'}>입장하기</button></div>`;
- $('#go').onclick=async()=>{const no=$('#no').value.trim(),nm=$('#nm').value.trim();if(!no||!nm){$('#er').textContent='학번과 이름을 모두 입력하세요.';return}
-  try{const r=await rpc('student_login',{p_no:no,p_name:nm});S={id:r.id,token:r.token,no,nm,max:r.max_step};const d=def(),g=r.data||{};D={obs:{...d.obs,...g.obs},rel:{...d.rel,...g.rel},app:{...d.app,...g.app}};if(!D.app.ord.length)D.app.ord=shuf();cur=S.max;student();setInterval(()=>save(1),30000)}catch(e){$('#er').textContent='입장 실패: '+e.message}}}
+function loginS(){A.innerHTML=`<div class="ctr c" style="padding:24px"><h2 style="margin-top:0">학생 입장</h2>${warn()}<input id="cl" placeholder="반 코드 (선생님이 알려 준 코드)"><br><br><input id="no" placeholder="학번 (예: 20105)"><br><br><input id="nm" placeholder="이름"><p id="er" class="no"></p><button class="p" id="go" ${cfgOk?'':'disabled'}>입장하기</button></div>`;
+ $('#go').onclick=async()=>{const cls=$('#cl').value.trim().toUpperCase(),no=$('#no').value.trim(),nm=$('#nm').value.trim();if(!cls||!no||!nm){$('#er').textContent='반 코드, 학번, 이름을 모두 입력하세요.';return}if(!/^[A-Z0-9가-힣_-]{1,20}$/.test(cls)){$('#er').textContent='반 코드는 글자·숫자·-·_ 만 쓸 수 있어요.';return}
+  try{const r=await rpc('student_login',{p_class:cls,p_no:no,p_name:nm});S={id:r.id,token:r.token,no,nm,cls,max:r.max_step==3?4:r.max_step,open:r.open};const d=def(),g=r.data||{};D={obs:{...d.obs,...g.obs},rel:{...d.rel,...g.rel},app:{...d.app,...g.app}};if(!(D.app.ord.length==6&&[0,1,2].every(i=>D.app.ord.slice(0,3).includes(i)))){D.app.ord=shuf();D.app.ans={};D.app.ex=0}cur=Math.max(...STG.filter(allowed));student();setInterval(spoll,8000)}catch(e){$('#er').textContent='입장 실패: '+e.message}}}
 function need(k){const r=[];
-if(k==1){BASE.forEach(t=>{const n=[0,1,2].filter(j=>!aok(key(t),j)).length;r.push([!n,n?`삼각형 ${t.join(', ')}: 정사각형 넓이 ${n}개를 입력해 주세요`:`삼각형 ${t.join(', ')} 넓이 입력 완료`])});r.push(six()?[gok(D.obs.guess),gok(D.obs.guess)?'추측 작성 완료':'두 삼각형 입력이 끝났어요. 이제 관계에 대한 생각을 작성해 주세요']:[false,'넓이 6개를 모두 입력하면 추측란이 나타나요'])}
+if(k==1)BASE.forEach((t,i)=>{const n=[0,1,2].filter(j=>!aok(key(t),j)).length;r.push([!n,n?`삼각형 ${i+1}: 정사각형 넓이 ${n}개를 입력해 주세요`:`삼각형 ${i+1} 넓이 입력 완료`])});
 if(k==2){const a=an(D.rel.t).kind=='arr2'||D.rel.cmp;r.push([a,a?'두 번째 배치 완성':'두 번째 배치를 완성해 주세요 (가운데에 두 정사각형이 남도록)']);r.push([D.rel.cmp,D.rel.cmp?'두 배치 비교 완료':"두 번째 배치를 완성한 후 '두 배치 비교하기'를 눌러 주세요"])}
-if(k==3)[[D.rel.t1,'첫 번째'],[D.rel.t2,'두 번째']].forEach(([v,n])=>{const l=(v||'').trim().length;r.push([l>=5,l>=5?n+' 질문 작성 완료':`${n} 질문에 답변을 작성해 주세요. (현재 ${l}자 / 최소 5자)`])});
-if(k==4){const u=[0,1,2].filter(i=>!basicOk(i)).map(i=>i+1);r.push([!u.length,u.length?`기본 문제 중 아직 풀지 않은 문제가 있습니다 (문제 ${u.join(', ')})`:'기본 문제 3개 완료']);[0,1].forEach(i=>{const l=(D.app.r[i]||'').trim().length;r.push([l>=6,l>=6?`서술형 ${i+1} 완료`:`서술형 답변 ${i+1}을 6자 이상 작성해 주세요. (현재 ${l}자 / 최소 6자)`])})}
+if(k==4){const u=[0,1,2].filter(i=>!basicOk(i)).map(i=>i+1);r.push([!u.length,u.length?`기본 문제 중 아직 풀지 않은 문제가 있습니다 (문제 ${u.join(', ')})`:'기본 문제 3개 완료'])}
+const nn=nextOf(k);if(comp(k)&&nn&&nn>S.open)r.push([false,'선생님이 다음 단계를 열어 줄 때까지 기다려 주세요 (자동으로 확인 중)']);
 return r}
 // ---------- 학생 화면 ----------
-function student(){A.innerHTML=`<header><b>피타고라스 정리</b><div class="st" id="st"></div><span class="small">학번 ${esc(S.no)} · ${esc(S.nm)} · <span id="stat">${esc(stat)}</span></span></header><div class="main" id="mn"></div><footer id="ft"></footer>`;view()}
-function upd(){$('#st').innerHTML=NAMES.map((n,i)=>`<button class="${i+1===cur?'cur':comp(i+1)?'dn':''}" ${i+1>S.max?'disabled':''} onclick="go(${i+1})">0${i+1} ${n}${comp(i+1)&&i+1!==cur?' ✓':''}</button>`).join('');
- $('#ft').innerHTML=`<button onclick="go(cur-1)" ${cur<2?'disabled':''}>← 이전</button><div class="small" style="flex:1;margin:0 12px;display:flex;flex-wrap:wrap;gap:2px 14px;align-items:center">${need(cur).map(([o,t])=>`<span class="${o?'ok':'no'}">${o?'✓':'○'} ${t}</span>`).join('')}</div><button class="p" onclick="nx()" ${comp(cur)?'':'disabled'}>${cur==4?'수업 완료':'다음 →'}</button>`}
-function go(n){if(n<1||n>S.max)return;cur=n;view()}
-function nx(){if(!comp(cur))return;if(cur==4){$('#mn').innerHTML=`<div class="c ctr" style="grid-column:1/-1"><h2>수업을 모두 마쳤어요 🎉</h2><p>${esc(S.nm)} 학생의 모든 활동이 저장되었습니다. 이전 단계로 돌아가 답을 고칠 수도 있어요.</p></div>`;save(1);return}
- S.max=Math.max(S.max,cur+1);cur++;save(1);view()}
-function view(){upd();[0,v1,v2,v3,v4][cur]();upd()}
+function student(){A.innerHTML=`<header><b>피타고라스 정리</b><div class="st" id="st"></div><span class="small">${esc(S.cls)}반 · 학번 ${esc(S.no)} · ${esc(S.nm)} · <span id="stat">${esc(stat)}</span></span></header><div class="main" id="mn"></div><footer id="ft"></footer>`;view()}
+function upd(){$('#st').innerHTML=STG.map(n=>`<button class="${n===cur?'cur':comp(n)?'dn':''}" ${allowed(n)?'':'disabled'} onclick="go(${n})">0${n} ${NM[n]}${comp(n)&&n!==cur?' ✓':''}</button>`).join('');
+ $('#ft').innerHTML=`<button onclick="go(prevOf(cur))" ${cur<2?'disabled':''}>← 이전</button><div class="small" style="flex:1;margin:0 12px;display:flex;flex-wrap:wrap;gap:2px 14px;align-items:center">${need(cur).map(([o,t])=>`<span class="${o?'ok':'no'}">${o?'✓':'○'} ${t}</span>`).join('')}</div><button class="p" onclick="nx()" ${comp(cur)&&(!nextOf(cur)||nextOf(cur)<=S.open)?'':'disabled'}>${nextOf(cur)?'다음 →':'수업 완료'}</button>`}
+const STG=[1,2,4],NM={1:'관찰하기',2:'관계 발견하기',4:'적용하기'},nextOf=n=>STG[STG.indexOf(n)+1],prevOf=n=>STG[STG.indexOf(n)-1],allowed=n=>n<=S.max&&n<=S.open;
+function go(n){if(!allowed(n))return;cur=n;view()}
+function nx(){if(!comp(cur))return;const nn=nextOf(cur);if(!nn){$('#mn').innerHTML=`<div class="c ctr" style="grid-column:1/-1"><h2>수업을 모두 마쳤어요 🎉</h2><p>${esc(S.nm)} 학생의 모든 활동이 저장되었습니다. 이전 단계로 돌아가 답을 고칠 수도 있어요.</p></div>`;save(1);return}if(nn>S.open)return;S.max=Math.max(S.max,nn);cur=nn;save(1);view()}
+function lockView(){$('#mn').innerHTML=`<div class="c ctr" style="grid-column:1/-1"><h2>선생님이 아직 열지 않은 단계예요</h2><p>선생님이 열어 주면 자동으로 이동할 수 있어요. 앞 단계에서 내용을 다시 확인하며 기다려 주세요.</p></div>`;upd()}
+async function spoll(){try{const r=await rpc('student_state',{p_token:S.token}),ch=r.open!==S.open;S.open=r.open;if(ch){if(cur>S.open)lockView();else upd()}}catch(e){}}
+function view(){if(cur>S.open){lockView();return}upd();({1:v1,2:v2,4:v4})[cur]();upd()}
 // 1단계
 const xl=()=>[...BASE,...D.obs.extra.map(k=>ALL.find(x=>key(x)===k)).filter(x=>x&&!BASE.includes(x))];
-function v1(){const o=D.obs,list=xl(),t=list[ti]||list[0],[p,qq,cc]=t,k=key(t);const names=['아래쪽 정사각형 (한 변 '+p+')','왼쪽 정사각형 (한 변 '+qq+')','빗변 쪽 정사각형 (한 변 '+cc+')'];
- $('#mn').innerHTML=`<div class="c left"><div class="row">${list.map((x,i)=>`<button class="${i===ti?'on':''}" onclick="ti=${i};selq=-1;v1()">${x.join(', ')}${i>1?' (추가)':''}</button>`).join('')}<button onclick="more()" ${EXT.every(x=>o.extra.includes(key(x)))?'disabled':''}>다른 삼각형 살펴보기</button></div>
- <div class="fig">${triSvg(p,qq,cc,selq,[p,qq,cc].map(v=>'한 변 '+v),1)}</div><div class="small">정사각형을 눌러 보세요. ${selq>=0?'<b>'+names[selq]+'</b> → 넓이는 한 변의 길이를 두 번 곱한 값, 모눈 한 칸이 1이에요.':'세 정사각형은 직각삼각형의 세 변에 각각 붙어 있어요. (모눈 한 칸 = 길이 1)'}</div></div>
- <div class="c right"><p class="small" style="margin:0 0 4px">활동 ①: 삼각형 3, 4, 5와 5, 12, 13의 정사각형 넓이 6개를 모두 구해 보세요.</p><b>${t.join(', ')} 삼각형의 정사각형 넓이</b>${names.map((n,j)=>`<label>${n.split(' (')[0]} 넓이 <span id="m${j}"></span></label><input id="a${j}" inputmode="numeric" value="${esc(o.a[k]?.[j]??'')}" oninput="setA('${k}',${j},this.value)" onchange="lg(1,'a:${k}:${j}',this.value)">`).join('')}
- <div id="gbox" style="display:${six()?'':'none'}"><label>활동 ②: 여러 삼각형을 관찰해 보니, 세 정사각형의 넓이 사이에는 어떤 관계가 있는 것 같나요?</label><textarea id="gs" rows="4" placeholder="내 생각을 자유롭게 써 보세요" oninput="D.obs.guess=this.value;upd();save()" onchange="lg(1,'guess',this.value)">${esc(o.guess)}</textarea></div></div>`;mk()}
+function v1(){const o=D.obs,list=xl(),t=list[ti]||list[0],[p,qq]=t,k=key(t),names=['아래쪽 정사각형','왼쪽 정사각형','빗변 쪽 정사각형'];
+ $('#mn').innerHTML=`<div class="c left"><div class="row">${list.map((x,i)=>`<button class="${i===ti?'on':''}" onclick="ti=${i};selq=-1;v1()">${i<3?'삼각형 '+(i+1):'추가 '+(i-2)}</button>`).join('')}<button onclick="more()" ${EXT.every(x=>o.extra.includes(key(x)))?'disabled':''}>다른 삼각형 살펴보기</button></div>
+ <div class="fig">${triSvg(p,qq,0,selq,['','',''],1)}</div><div class="small">모눈종이 위의 삼각형과 세 정사각형을 관찰해 보세요. 정사각형을 누르면 선택한 정사각형이 표시돼요. (모눈 한 칸의 넓이 = 1)</div></div>
+ <div class="c right"><b>세 정사각형의 넓이를 직접 구해 입력해 보세요</b><p class="small" style="margin:4px 0">${selq>=0?'선택한 정사각형: <b>'+names[selq]+'</b>':'정사각형을 눌러 보세요.'}</p>${names.map((n,j)=>`<label>${n} 넓이 <span id="m${j}"></span></label><input id="a${j}" inputmode="numeric" value="${esc(o.a[k]?.[j]??'')}" oninput="setA('${k}',${j},this.value)" onchange="lg(1,'a:${k}:${j}',this.value)">`).join('')}<p class="small">삼각형 1~3의 넓이를 모두 맞게 입력하면 다음 단계로 갈 수 있어요. '다른 삼각형 살펴보기'는 선택이에요.</p></div>`;mk()}
 function pick(i){selq=i;v1();$('#a'+i)?.focus()}
 function more(){const n=EXT.find(x=>!D.obs.extra.includes(key(x)));if(!n)return;D.obs.extra.push(key(n));ti=xl().length-1;selq=-1;ev(1,'extra',{t:key(n)});save(1);v1()}
 function setA(k,j,v){D.obs.a[k]=D.obs.a[k]||['','',''];D.obs.a[k][j]=v.trim();mk();save()}
-function mk(){const t=xl()[ti]||BASE[0],k=key(t);[0,1,2].forEach(j=>{const m=$('#m'+j);if(m){const v=D.obs.a[k]?.[j];m.innerHTML=!v?'':aok(k,j)?'<span class="ok">✓ 맞아요</span>':'<span class="no">다시 계산해 봐요</span>'}});const g=$('#gbox');if(g)g.style.display=six()?'':'none';upd()}
+function mk(){const t=xl()[ti]||BASE[0],k=key(t);[0,1,2].forEach(j=>{const m=$('#m'+j);if(m){const v=D.obs.a[k]?.[j];m.innerHTML=!v?'':aok(k,j)?'<span class="ok">✓ 맞아요</span>':'<span class="no">다시 세어 봐요</span>'}});upd()}
 // 2단계
 function v2(){if(!D.rel.v1){D.rel.v1=true;ev(2,'view1',{});save(1)}
  $('#mn').innerHTML=`<div class="c left" id="L"></div><div class="c right"><b>직각삼각형 4개의 자리를 바꿔 보세요</b><p>① 지금 배치(첫 번째): 큰 정사각형의 한 변은 3+4=7, 넓이 7×7=49. 삼각형 한 개의 넓이는 3×4÷2=6이라 네 개는 24. 가운데 남은 부분은 49−24=25 → 한 변이 5인 정사각형(빗변 c)이에요.</p><p>② 삼각형을 끌어서 옮겨, 가운데에 <b>두 개의 정사각형</b>(한 변 a=3, 한 변 b=4)이 남게 만들어 보세요. 삼각형의 변: 짧은 직각변 <b>a</b>=3, 긴 직각변 <b>b</b>=4, 빗변 <b>c</b>=5 (회전은 하지 않아요)</p><p>모눈 한 칸씩 딱 맞게 붙어요. 노란색 = 남는 부분, 빨간색 = 겹친 부분.</p><div id="msg" class="c" style="background:var(--g)"></div><div class="row" style="margin-top:8px"><button onclick="rst()">처음 배치로 돌아가기</button><button class="p" id="cmpb" onclick="docmp()"></button></div></div>`;lay2()}
@@ -125,43 +124,44 @@ function bind2(){const s=$('#bd');let dr=null;
 
 function rst(){if(cv){cv=false;lay2();return}D.rel.t=T1.map(t=>({...t}));sel2=-1;ev(2,'reset',{});save();r2()}
 function docmp(){if(cv){cv=false;lay2();r2();return}const a=an(D.rel.t);if(a.kind!='arr2')return;D.rel.cmp=true;D.rel.fin=D.rel.t.map(t=>({...t}));ev(2,'compare',{kind:a.kind});save(1);cv=true;lay2()}
-// 3단계
-function v3(){$('#mn').innerHTML=`<div class="c left">${cmpHtml()}</div><div class="c right"><b>생각 정리하기</b><label>두 가지 배치에서 공통적으로 유지되는 것은 무엇인가요?</label><textarea rows="4" oninput="D.rel.t1=this.value;upd();save()" onchange="lg(3,'t1',this.value)">${esc(D.rel.t1)}</textarea><label>그렇다면 가운데 남는 부분의 넓이 사이에는 어떤 관계가 성립할까요? (3, 4, 5로 설명해 봐도 좋아요)</label><textarea rows="5" oninput="D.rel.t2=this.value;upd();save()" onchange="lg(3,'t2',this.value)">${esc(D.rel.t2)}</textarea><p class="small">각 5자 이상 작성해 주세요. 자유롭게 써도 괜찮아요.</p></div>`}
 // 4단계
 let pi=0;
-function v4(){const p=prob(pi),lab=p.ar.map((v,j)=>j===p.h?'?':v),n=3+D.app.ex,ky=(pi<3?'basic'+(pi+1):'extra'+(pi-2)),qs=['처음에는 이 정사각형의 넓이를 어떻게 구하려 했나요?','지금은 어떤 관계를 이용하여 구할 수 있나요?'];
- $('#mn').innerHTML=`<div class="c left"><div class="row">${Array.from({length:n},(_,i)=>`<button class="${i===pi?'on':''}" onclick="pi=${i};v4();upd()">${i<3?'문제 '+(i+1):'추가 '+(i-2)}${basicOk(i)?' ✓':''}</button>`).join('')}<button onclick="addx()" ${D.app.ex>=3?'disabled':''}>추가 문제 풀기</button></div><div class="fig">${triSvg(p.p,p.q,p.c,-1,lab,0)}</div><div class="small">아래·왼쪽 정사각형은 직각변, 오른쪽 위 큰 정사각형은 빗변에 붙어 있어요. 숫자는 정사각형의 넓이예요.</div></div>
- <div class="c right"><b>? 에 들어갈 넓이는?</b> <span class="small">(${pi<3?'기본 문제':'추가 문제 · 선택'})</span><div class="row"><input id="an" inputmode="numeric" value="${esc(D.app.ans[pi]??'')}" oninput="D.app.ans[pi]=this.value.trim();fb();save()" onchange="lg(4,'${ky}',this.value)" style="width:110px"><span id="fb"></span></div>
- ${qs.map((t,i)=>`<label>${i+1}. ${t}</label><textarea rows="3" oninput="D.app.r[${i}]=this.value;upd();save()" onchange="lg(4,'r${i}',this.value)">${esc(D.app.r[i])}</textarea>`).join('')}<p class="small">기본 3문제 + 서술 2개(각 6자 이상)를 마치면 완료돼요. 추가 문제는 풀고 싶을 때만 풀어도 돼요.</p></div>`;fb()}
+function v4(){const p=prob(pi),lab=p.ar.map((v,j)=>j===p.h?'?':v),n=3+D.app.ex,ky=(pi<3?'basic'+(pi+1):'extra'+(pi-2));
+ $('#mn').innerHTML=`<div class="c left"><div class="row">${Array.from({length:n},(_,i)=>`<button class="${i===pi?'on':''}" onclick="pi=${i};v4();upd()">${i<3?'문제 '+(i+1):'추가 '+(i-2)}${basicOk(i)?' ✓':''}</button>`).join('')}<button onclick="addx()" ${D.app.ex>=3?'disabled':''}>추가 문제 풀기</button></div><div class="fig">${triSvg(p.p,p.q,0,-1,lab,0)}</div><div class="small">각 정사각형 안의 숫자는 그 정사각형의 넓이예요. 물음표(?)에 들어갈 넓이를 구해 보세요.</div></div>
+ <div class="c right"><b>? 에 들어갈 넓이는?</b> <span class="small">(${pi<3?'기본 문제':'추가 문제 · 선택'})</span><div class="row" style="margin-top:6px"><input id="an" inputmode="numeric" value="${esc(D.app.ans[pi]??'')}" oninput="D.app.ans[pi]=this.value.trim();fb();save()" onchange="lg(4,'${ky}',this.value)" style="width:110px"><span id="fb"></span></div><p class="small">기본 3문제를 모두 풀면 수업을 마칠 수 있어요. 추가 문제는 풀고 싶을 때만 풀어도 돼요.</p></div>`;fb()}
 function addx(){if(D.app.ex>=3)return;D.app.ex++;pi=2+D.app.ex;ev(4,'extra_open',{n:D.app.ex});save(1);v4();upd()}
-function fb(){const p=prob(pi),v=D.app.ans[pi],f=$('#fb');if(f)f.innerHTML=!v?'':basicOk(pi)?'<span class="ok">✓ 정답</span>':'<span class="no">다시 생각해 봐요</span>';upd()}
+function fb(){const v=D.app.ans[pi],f=$('#fb');if(f)f.innerHTML=!v?'':basicOk(pi)?'<span class="ok">✓ 정답</span>':'<span class="no">다시 생각해 봐요</span>';upd()}
 // ---------- 교사 ----------
+let TK=sessionStorage.getItem('tk'),LIST=[],poll;
 function loginT(){if(TK)return dash();A.innerHTML=`<div class="ctr c" style="padding:24px"><h2 style="margin-top:0">교사 인증</h2>${warn()}<input id="pw" type="password" placeholder="교사용 비밀번호"><p id="er" class="no"></p><button class="p" id="go" ${cfgOk?'':'disabled'}>확인</button></div>`;
  $('#go').onclick=async()=>{try{const t=await rpc('teacher_login',{p_pw:$('#pw').value});if(!t){$('#er').textContent='비밀번호가 올바르지 않습니다.';return}TK=t;sessionStorage.setItem('tk',t);dash()}catch(e){$('#er').textContent='오류: '+e.message}}}
+let fq='',ff=0,fc='',CL=[];
 async function dash(){A.innerHTML=`<header><b>교사용 대시보드</b><span class="small" id="ts"></span><button onclick="dl()">CSV 다운로드</button><button onclick="sessionStorage.removeItem('tk');location.reload()">나가기</button></header><div class="dash" id="dv"></div>`;await load();clearInterval(poll);poll=setInterval(()=>{if(!$('#det'))load()},10000)}
-async function load(){try{LIST=await rpc('teacher_list',{p_token:TK});$('#ts').textContent='갱신: '+new Date().toLocaleTimeString()+' (10초마다 자동 조회)';drawT()}catch(e){if(/unauthorized/.test(e.message)){sessionStorage.removeItem('tk');location.reload()}else $('#dv').innerHTML='<p class="no">불러오기 실패: '+esc(e.message)+'</p>'}}
+async function load(){try{[LIST,CL]=await Promise.all([rpc('teacher_list',{p_token:TK}),rpc('teacher_classes',{p_token:TK})]);$('#ts').textContent='갱신: '+new Date().toLocaleTimeString()+' (10초마다 자동 조회)';drawT()}catch(e){if(/unauthorized/.test(e.message)){sessionStorage.removeItem('tk');location.reload()}else $('#dv').innerHTML='<p class="no">불러오기 실패: '+esc(e.message)+'</p>'}}
 const online=s=>Date.now()-new Date(s.last_seen)<90000;
-function drawT(){const L=LIST.filter(s=>(s.no+s.name).includes(fq)&&(!ff||s.max_step==ff&&!s.completed||(ff==5&&s.completed)));const cnt=n=>LIST.filter(s=>!s.completed&&s.max_step==n).length;
- $('#dv').innerHTML=`<div class="stats"><div class="c"><b>${LIST.length}</b>전체 학생</div><div class="c"><b>${LIST.filter(online).length}</b>접속 중</div><div class="c"><b>${LIST.filter(s=>s.completed).length}</b>학습 완료</div><div class="c">${NAMES.map((n,i)=>`${n}: <b style="display:inline;font-size:14px">${cnt(i+1)}</b>`).join('<br>')}</div></div>
- <div class="row" style="margin-bottom:8px"><input style="max-width:220px" placeholder="학번·이름 검색" value="${esc(fq)}" oninput="fq=this.value;drawT();$('#dv input').focus();const i=$('#dv input');i.setSelectionRange(99,99)"><select onchange="ff=+this.value;drawT()" style="padding:6px;border-radius:8px">${['전체','1단계','2단계','3단계','4단계','완료'].map((n,i)=>`<option value="${i}" ${i==ff?'selected':''}>${n}</option>`).join('')}</select></div>
- <table><tr><th>학번</th><th>이름</th><th>현재 단계</th><th>상태</th><th>마지막 활동</th></tr>${L.map(s=>`<tr class="h" onclick="detail('${s.id}')"><td>${esc(s.no)}</td><td>${esc(s.name)}</td><td>${s.max_step}</td><td>${s.completed?'완료':online(s)?'접속 중':'오프라인'}</td><td>${new Date(s.updated_at).toLocaleString()}</td></tr>`).join('')}</table>`}
+function drawT(){const V=LIST.filter(s=>fc===''||s.class===fc),L=V.filter(s=>(s.no+s.name).includes(fq)&&(!ff||(ff==5?s.completed:!s.completed&&s.max_step==ff))),cnt=n=>V.filter(s=>!s.completed&&s.max_step==n).length,cn=c=>c||'(반 없음)',stp=n=>STG.filter(x=>x<=n).map(x=>'0'+x).join('·');
+ $('#dv').innerHTML=`<h3 style="margin:0 0 6px">반별 단계 관리</h3><table style="margin-bottom:10px"><tr><th>반</th><th>학생</th><th>열어 줄 단계까지 (눌러서 변경 · 낮추면 다시 잠금)</th><th>현재 상태</th></tr>${CL.map(c=>`<tr><td>${esc(cn(c.class))}</td><td>${c.n}</td><td>${STG.map(n=>`<button class="${c.open==n?'on':''}" onclick="setOpen('${esc(c.class)}',${n})">0${n} ${NM[n]}</button>`).join(' ')}</td><td>${stp(c.open)} 열림 · 그 이후 잠김</td></tr>`).join('')||'<tr><td colspan="4">아직 반이 없어요. 학생이 반 코드로 입장하면 나타나요.</td></tr>'}</table>
+ <div class="stats"><div class="c"><b>${V.length}</b>학생 ${fc?'('+esc(cn(fc))+')':'(전체)'}</div><div class="c"><b>${V.filter(online).length}</b>접속 중</div><div class="c"><b>${V.filter(s=>s.completed).length}</b>학습 완료</div><div class="c">${STG.map(n=>`0${n} ${NM[n]}: <b style="display:inline;font-size:14px">${cnt(n)}</b>`).join('<br>')}</div></div>
+ <div class="row" style="margin-bottom:8px"><input style="max-width:200px" placeholder="학번·이름 검색" value="${esc(fq)}" oninput="fq=this.value;drawT();$('#dv input').focus();$('#dv input').setSelectionRange(99,99)"><select onchange="fc=this.value;drawT()" style="padding:6px;border-radius:8px"><option value="">모든 반</option>${CL.map(c=>`<option value="${esc(c.class)}" ${c.class===fc?'selected':''}>${esc(cn(c.class))}</option>`).join('')}</select><select onchange="ff=+this.value;drawT()" style="padding:6px;border-radius:8px">${[[0,'모든 단계'],[1,'01 관찰'],[2,'02 발견'],[4,'04 적용'],[5,'완료']].map(([v,n])=>`<option value="${v}" ${v==ff?'selected':''}>${n}</option>`).join('')}</select></div>
+ <table><tr><th>반</th><th>학번</th><th>이름</th><th>현재 단계</th><th>상태</th><th>마지막 활동</th></tr>${L.map(s=>`<tr class="h" onclick="detail('${s.id}')"><td>${esc(cn(s.class))}</td><td>${esc(s.no)}</td><td>${esc(s.name)}</td><td>${s.max_step}</td><td>${s.completed?'완료':online(s)?'접속 중':'오프라인'}</td><td>${new Date(s.updated_at).toLocaleString()}</td></tr>`).join('')}</table>`}
+async function setOpen(c,n){try{await rpc('teacher_set_step',{p_token:TK,p_class:c,p_step:n});await load()}catch(e){alert('변경 실패: '+e.message)}}
 let rp;
 async function detail(id){const s=LIST.find(x=>x.id==id);let E=[];try{E=await rpc('teacher_events',{p_token:TK,p_sid:id})}catch(e){alert(e.message);return}
  const g=s.data,o=g.obs||{a:{},extra:[]},r=g.rel||{},ap=g.app||{ord:[],ans:{},r:[]};D=ap.ord?.length?{app:ap,obs:o}:{app:{ord:[],ans:{},r:[]},obs:o};
  const hist=st=>E.filter(e=>e.kind=='ans'&&e.step==st).map(e=>`<div class="small">${new Date(e.at).toLocaleTimeString()} · ${esc(e.payload.k)}: ${esc(e.payload.v)}</div>`).join('')||'<div class="small">수정 기록 없음</div>';
- const rows1=ALL.filter(t=>BASE.includes(t)||(o.extra||[]).includes(key(t))||o.a?.[key(t)]).map(t=>{const v=o.a?.[key(t)]||[];return`<tr><td>${t.join(', ')}${BASE.includes(t)?'':' (추가)'}</td>${[0,1,2].map(j=>{const ok=String(v[j]??'')==String(t[j]**2);return`<td class="${ok?'ok':'no'}">${esc(v[j]??'—')} ${ok?'✓':'✗'}</td>`}).join('')}</tr>`}).join('');
+ const rows1=ALL.filter(t=>BASE.includes(t)||(o.extra||[]).includes(key(t))||o.a?.[key(t)]).map(t=>{const v=o.a?.[key(t)]||[];return`<tr><td>밑변 ${t[0]}, 높이 ${t[1]}${BASE.includes(t)?'':' (추가)'}</td>${[0,1,2].map(j=>{const ok=String(v[j]??'')==String([t[0]**2,t[1]**2,t[2]][j]);return`<td class="${ok?'ok':'no'}">${esc(v[j]??'—')} ${ok?'✓':'✗'}</td>`}).join('')}</tr>`}).join('');
  const T=r.t||T1,a=an(T),moves=E.filter(e=>e.step==2&&['move','rotate','reset','compare'].includes(e.kind));
- const pr=ap.ord?.length?[0,1,2,3,4,5].filter(k=>k<3||ap.ans?.[k]||k<3+(ap.ex||0)).map(k=>{D.app=ap;const p=prob(k),v=ap.ans?.[k];return`<tr><td>${k<3?"기본":"추가(선택)"} ${k<3?k+1:k-2}</td><td>${p.p}, ${p.q}, ${p.c}</td><td>${p.ar.map((x,j)=>j==p.h?'?':x).join(' / ')}</td><td>${esc(v??'—')}</td><td class="${String(v)==String(p.ans)?'ok':'no'}">${String(v)==String(p.ans)?'정답':'오답/미입력'}</td></tr>`}).join(''):'';
- A.innerHTML=`<header><button onclick="dash()">← 목록</button><b>${esc(s.no)} ${esc(s.name)}</b><span class="small">${s.completed?'수업 완료':'진행 중 (열린 단계 '+s.max_step+')'}</span></header><div class="dash" id="det">
- <h3>1단계 관찰하기</h3><table><tr><th>삼각형</th><th>한 직각변 쪽</th><th>다른 직각변 쪽</th><th>빗변 쪽</th></tr>${rows1}</table><p><b>추측 원문</b><br>${esc(o.guess||'—')}</p>${hist(1)}
+ const pr=ap.ord?.length?[0,1,2,3,4,5].filter(k=>k<3||ap.ans?.[k]||k<3+(ap.ex||0)).map(k=>{D.app=ap;const p=prob(k),v=ap.ans?.[k];return`<tr><td>${k<3?"기본":"추가(선택)"} ${k<3?k+1:k-2}</td><td>밑변 ${p.p}, 높이 ${p.q}</td><td>${p.ar.map((x,j)=>j==p.h?'?':x).join(' / ')}</td><td>${esc(v??'—')}</td><td class="${String(v)==String(p.ans)?'ok':'no'}">${String(v)==String(p.ans)?'정답':'오답/미입력'}</td></tr>`}).join(''):'';
+ A.innerHTML=`<header><button onclick="dash()">← 목록</button><b>${esc(s.class||'반 없음')} · ${esc(s.no)} ${esc(s.name)}</b><span class="small">${s.completed?'수업 완료':'진행 중 (열린 단계 '+s.max_step+')'}</span></header><div class="dash" id="det">
+ <h3>1단계 관찰하기</h3><table><tr><th>삼각형</th><th>한 직각변 쪽</th><th>다른 직각변 쪽</th><th>빗변 쪽</th></tr>${rows1}</table>${o.guess?`<p><b>추측 원문(이전 기록)</b><br>${esc(o.guess)}</p>`:''}${hist(1)}
  <h3>2단계 관계 발견하기</h3><div style="display:flex;gap:16px;flex-wrap:wrap"><div style="width:240px;height:240px">${svg2(T,a)}<div class="small" id="rpc">최종 배치: ${a.kind=='arr2'?'두 번째 배치 완성':a.kind=='arr1'?'첫 번째 배치':a.kind=='bad'?'겹침/이탈':'기타'} · 비교 ${r.cmp?'완료':'미완료'}</div></div>
  <div style="flex:1;min-width:260px"><div class="row"><button onclick='replay(${JSON.stringify(moves)})'>조작 과정 재생 (${moves.length}개 이벤트)</button></div><div style="width:240px;height:240px" id="rp">${svg2(T1,an(T1))}</div><table>${T.map((t,i)=>`<tr><td>삼각형 ${i+1}</td><td>위치(${t.x},${t.y})</td><td>${t.r*90}° 회전</td></tr>`).join('')}</table></div></div>
- <h3>3단계 생각 정리하기</h3><p><b>공통으로 유지되는 것</b><br>${esc(r.t1||'—')}</p><p><b>남는 부분 넓이의 관계</b><br>${esc(r.t2||'—')}</p>${hist(3)}
- <h3>4단계 적용하기</h3><table><tr><th>번호</th><th>삼각형</th><th>주어진 넓이</th><th>학생 답</th><th>결과</th></tr>${pr}</table>${(ap.r||[]).map((t,i)=>`<p><b>서술 ${i+1}</b><br>${esc(t||'—')}</p>`).join('')}${hist(4)}</div>`}
+ ${(r.t1||r.t2)?`<h3>이전 기록: 생각 정리하기</h3><p>${esc(r.t1||'—')}</p><p>${esc(r.t2||'—')}</p>${hist(3)}`:''}
+ <h3>04 적용하기 (기본 문제 3개 + 선택 추가 문제)</h3><table><tr><th>번호</th><th>삼각형</th><th>주어진 넓이</th><th>학생 답</th><th>결과</th></tr>${pr}</table>${(ap.r||[]).map((t,i)=>!t?'':`<p><b>서술 ${i+1}</b><br>${esc(t||'—')}</p>`).join('')}${hist(4)}</div>`}
 function replay(mv){clearInterval(rp);let T=T1.map(t=>({...t})),i=0;const box=$('#rp');rp=setInterval(()=>{if(i>=mv.length){clearInterval(rp);return}const e=mv[i++];if(e.kind=='reset')T=T1.map(t=>({...t}));else if(e.kind=='move'||e.kind=='rotate')T[e.payload.i]={x:e.payload.x,y:e.payload.y,r:e.payload.r};box.innerHTML=svg2(T,an(T))+`<div class="small">${i}/${mv.length} · ${new Date(e.at).toLocaleTimeString()} · ${e.kind}</div>`},700)}
-function dl(){const H=['학번','이름','열린단계','완료','마지막활동','넓이입력(삼각형:a/b/c)','추가삼각형','추측','2단계 배치','비교','생각정리1','생각정리2','문제답(번호:삼각형:답:정오)','서술1','서술2','서술3'];
+function dl(){const H=['반','학번','이름','열린단계','완료','마지막활동','넓이입력(삼각형:a/b/c)','추가삼각형','추측','2단계 배치','비교','생각정리1','생각정리2','문제답(번호:삼각형:답:정오)','서술1','서술2','서술3'];
  const rows=LIST.map(s=>{const g=s.data,o=g.obs||{a:{},extra:[]},r=g.rel||{},ap=g.app||{ord:[],ans:{},r:[]};D={app:ap};const a=an(r.t||T1);
-  return[s.no,s.name,s.max_step,s.completed?'Y':'N',s.updated_at,Object.entries(o.a||{}).map(([k,v])=>k+':'+v.join('/')).join(' | '),(o.extra||[]).join(','),o.guess,a.kind,r.cmp?'Y':'N',r.t1,r.t2,
-  (ap.ord?.length?[0,1,2,3,4,5].filter(k=>k<3||ap.ans?.[k]).map(k=>{const p=prob(k);return`${k<3?"기본":"추가"}${k<3?k+1:k-2}:${p.p}-${p.q}-${p.c}:${ap.ans?.[k]??''}:${String(ap.ans?.[k])==String(p.ans)?'O':'X'}`}).join(' | '):''),...(ap.r||['','',''])]});
+  return[s.class,s.no,s.name,s.max_step,s.completed?'Y':'N',s.updated_at,Object.entries(o.a||{}).map(([k,v])=>k+':'+v.join('/')).join(' | '),(o.extra||[]).join(','),o.guess,a.kind,r.cmp?'Y':'N',r.t1,r.t2,
+  (ap.ord?.length?[0,1,2,3,4,5].filter(k=>k<3||ap.ans?.[k]).map(k=>{const p=prob(k);return`${k<3?"기본":"추가"}${k<3?k+1:k-2}:${p.p}-${p.q}:${ap.ans?.[k]??''}:${String(ap.ans?.[k])==String(p.ans)?'O':'X'}`}).join(' | '):''),...(ap.r||['','',''])]});
  const q2=v=>'"'+String(v??'').replace(/"/g,'""')+'"',blob=new Blob(['\ufeff'+[H,...rows].map(r=>r.map(q2).join(',')).join('\n')],{type:'text/csv'}),u=document.createElement('a');u.href=URL.createObjectURL(blob);u.download='pythagoras_activity.csv';u.click()}
 </script></body></html>
